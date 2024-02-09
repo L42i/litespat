@@ -1,11 +1,6 @@
-
-
-
-
 ~n_inputs       = 32;
 ~hoa_order      = 5;
 ~n_hoa_channels = (pow(~hoa_order + 1.0 ,2.0)).asInteger;
-
 
 s.options.device               = "litespat";
 s.options.numInputBusChannels  = ~n_inputs;
@@ -70,5 +65,35 @@ s.waitForBoot({
 	~hoa_output.set(\gain,0.5);
 	~hoa_output.moveToTail(~output_GROUP);
 
+
+	OSCdef('/source/azim',
+		{
+			arg msg, time, addr, recvPort;
+			var azim = msg[2];
+
+			~hoa_panners[msg[1]].set(\azim, azim);
+			postln("Azimuth: "+azim)
+
+	},'/source/azim');
+
+	~elev_OSC = OSCFunc(
+		{
+			arg msg, time, addr, recvPort;
+			var elev = msg[2];
+
+			~hoa_panners[msg[1]].set(\elev,elev);
+			postln("Elevation: "+elev)
+
+	}, '/source/elev');
+
+	~dist_OSC = OSCFunc(
+		{
+			arg msg, time, addr, recvPort;
+			var dist = msg[2];
+
+			~hoa_panners[msg[1]].set(\dist,dist);
+			postln("Distance: "+dist)
+
+	}, '/source/dist');
 
 });
