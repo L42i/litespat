@@ -2,6 +2,9 @@
 // Basic settings for this script
 ////////////////////////////////////////////////////////////////////////////////////////
 
+// port for listening to incoming OSC data
+~osc_IN = 6666;
+
 ~n_inputs       = 32;
 ~hoa_order      = 5;
 ~n_hoa_channels = (pow(~hoa_order + 1.0 ,2.0)).asInteger;
@@ -62,10 +65,11 @@ s.waitForBoot({
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// create all encoders in a loop
-	for (0, ~n_inputs -1, {arg cnt;
+	for (0, ~n_inputs
+		-1, {arg i;
 
 		post('Adding HOA encoder module: ');
-		cnt.postln;
+		i.postln;
 
 		// this is the array of encoders
 		~hoa_panners = ~hoa_panners.add(
@@ -96,6 +100,29 @@ s.waitForBoot({
 	////////////////////////////////////////////////////////////////////////////////////////
 	// One OSC listener function for each spatial paramter
 
+
+		OSCdef('/hand',
+		{
+
+			arg msg, time, addr, recvPort;
+			var a,e,d;
+
+			a = msg[2] / 180 * 3.1415;
+			e = msg[3] / 180 * 3.1415;
+			d = msg[4];
+
+			~hoa_panners[0].set(\azim, a);
+			~hoa_panners[0].set(\elev,e);
+
+			x.sendMsg('/source/azim',0,a*10);
+			x.sendMsg('/source/elev',0,e*10);
+
+			a.postln;
+			e.postln;
+
+	},'/example/7');
+
+
 	OSCdef('/source/azim',
 		{
 			arg msg, time, addr, recvPort;
@@ -125,5 +152,8 @@ s.waitForBoot({
 			postln("Distance: "+dist)
 
 	}, '/source/dist');
+
+
+	thisProcess.openUDPPort(~osc_IN);
 
 });
