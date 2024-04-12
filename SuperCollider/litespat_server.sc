@@ -3,9 +3,12 @@
 ////////////////////////////////////////////////////////////////////////////////////////
 
 // port for listening to incoming OSC data
-~osc_IN = 6666;
+~osc_IN         = 6666;
 
+// this determines how many sources (and inputs) we have
 ~n_inputs       = 32;
+
+// the HOA order determines the size of the HOA bus and the nr of outputs
 ~hoa_order      = 5;
 ~n_hoa_channels = (pow(~hoa_order + 1.0 ,2.0)).asInteger;
 
@@ -36,12 +39,13 @@ s.waitForBoot({
 			out_bus = 0,
 			azim    = 0,
 			elev    = 0,
-			dist    = 3,
+			dist    = 0.1,
 			gain    = 1
 			|
 
+
 			var sound = gain * SoundIn.ar(in_bus);
-			var level =  (1.0/(dist+1.0))*(1.0/(dist+1.0));
+			var level =  (1.0/(dist+1.0))*(1.0 / ( max(0.01,dist)+1.0));
 			var bform = HOASphericalHarmonics.coefN3D(~hoa_order, azim, elev) * sound * level;
 
 			Out.ar(out_bus, bform);
@@ -68,60 +72,80 @@ s.waitForBoot({
 	for (0, ~n_inputs
 		-1, {arg i;
 
-		post('Adding HOA encoder module: ');
-		i.postln;
+			post('Adding HOA encoder module: ');
+			i.postln;
 
-		// this is the array of encoders
-		~hoa_panners = ~hoa_panners.add(
-			Synth(\hoa_mono_encoder,
-				[
-					\in_bus,  i,
-					\out_bus, ~ambi_BUS.index
-				],
-				target: ~spatial_GROUP
-		);)
+			// this is the array of encoders
+			~hoa_panners = ~hoa_panners.add(
+				Synth(\hoa_mono_encoder,
+					[
+						\in_bus,  i,
+						\out_bus, ~ambi_BUS.index
+					],
+					target: ~spatial_GROUP
+			);)
 	});
 	s.sync;
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// Another group for the outputs
+	////////////////////////////////////////////////////////////////////////////////////////
+
 	~output_GROUP	 = Group.after(~spatial_GROUP);
 	s.sync;
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// The output node
+	////////////////////////////////////////////////////////////////////////////////////////
+
 	~hoa_output = {|gain=1| Out.ar(0 ,gain * In.ar(~ambi_BUS.index,~n_hoa_channels))}.play;
 	s.sync;
 	// goes into the output group
 	~hoa_output.moveToTail(~output_GROUP);
-	~hoa_output.set(\gain,0.5);
+	~hoa_output.set(\gain,0.75);
+
 
 
 	////////////////////////////////////////////////////////////////////////////////////////
-	// One OSC listener function for each spatial paramter
+	// One OSC listener for data from the Quest 3
+	////////////////////////////////////////////////////////////////////////////////////////
 
-
-		OSCdef('/hand',
+	OSCdef('/hand',
 		{
 
 			arg msg, time, addr, recvPort;
 			var a,e,d;
+			var x,y,z;
 
-			a = msg[2] / 180 * 3.1415;
-			e = msg[3] / 180 * 3.1415;
-			d = msg[4];
+			//a = msg[4] / 180 * 3.1415;
+			//e = msg[5] / 180 * 3.1415;
+			//d = msg[6];
 
-			~hoa_panners[0].set(\azim, a);
-			~hoa_panners[0].set(\elev,e);
 
-			x.sendMsg('/source/azim',0,a*10);
-			x.sendMsg('/source/elev',0,e*10);
+			var c;
 
-			a.postln;
-			e.postln;
+			if(msg[2]=='src1:',{
 
-	},'/example/7');
+				x = msg[4];
+				y = msg[5];
+				z = msg[6];
 
+				c	= Cartesian(x,y,z);
+
+				~hoa_panners[0].set(\azim, c.theta());
+				~hoa_panners[0].set(\elev, c.phi());
+				~hoa_panners[0].set(\dist, c.rho());
+
+				msg.postln;
+
+			},{});
+
+
+	},'/src/xyz');
+
+	////////////////////////////////////////////////////////////////////////////////////////
+	// One OSC listener function for each spatial paramter
+	////////////////////////////////////////////////////////////////////////////////////////
 
 	OSCdef('/source/azim',
 		{
@@ -133,7 +157,7 @@ s.waitForBoot({
 
 	},'/source/azim');
 
-	~elev_OSC = OSCFunc(
+	OSCdef('/source/elev',
 		{
 			arg msg, time, addr, recvPort;
 			var elev = msg[2];
@@ -143,7 +167,7 @@ s.waitForBoot({
 
 	}, '/source/elev');
 
-	~dist_OSC = OSCFunc(
+	OSCdef('/source/dist',
 		{
 			arg msg, time, addr, recvPort;
 			var dist = msg[2];
@@ -154,6 +178,8 @@ s.waitForBoot({
 	}, '/source/dist');
 
 
+	// open our extra ports for OSC and give feedback
 	thisProcess.openUDPPort(~osc_IN);
+	postln("Listening for OSC on ports: "++thisProcess.openPorts);
 
 });
