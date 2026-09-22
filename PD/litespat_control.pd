@@ -1,4 +1,4 @@
-#N canvas 101 568 2670 1514 10;
+#N canvas 847 524 2670 1514 10;
 #X obj 774 580 list trim;
 #X obj 774 553 list prepend send;
 #X msg 936 616 disconnect;
@@ -65,6 +65,7 @@
 #X floatatom 1717 380 5 0 0 0 - - - 0;
 #X obj 1717 402 * 100;
 #X obj 1662 313 route elev;
+#X obj 168 383 print;
 #X connect 0 0 3 0;
 #X connect 1 0 0 0;
 #X connect 2 0 3 0;
@@ -88,6 +89,7 @@
 #X connect 23 0 19 0;
 #X connect 23 0 35 0;
 #X connect 24 0 1 0;
+#X connect 24 0 66 0;
 #X connect 25 0 26 1;
 #X connect 25 0 39 0;
 #X connect 26 0 24 0;

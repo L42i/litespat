@@ -32,24 +32,32 @@ s.waitForBoot({
 	////////////////////////////////////////////////////////////////////////////////////
 	// This is the SynthDef for the encoders
 
-	SynthDef(\hoa_mono_encoder,
-		{
-			|
-			in_bus  = nil,
-			out_bus = 0,
-			azim    = 0,
-			elev    = 0,
-			dist    = 0.1,
-			gain    = 1
-			|
+	SynthDef(\hoa_mono_encoder, {
+		|
+		in_bus  = 0,     // Defaulting to 0 for audio input
+		out_bus = 0,
+		azim    = 0,     // Azimuth (theta) in radians
+		elev    = 0,     // Elevation (phi) in radians
+		dist    = 1.5,   // Radius/Distance in meters (ATK references a default 1.5m)
+		gain    = 1
+		|
 
+		var sound, bform;
 
-			var sound = gain * SoundIn.ar(in_bus);
-			var level =  (1.0/(dist+1.0))*(1.0 / ( max(0.01,dist)+1.0));
-			var bform = HOASphericalHarmonics.coefN3D(~hoa_order, azim, elev) * sound * level;
+		// 1. Capture and scale your input mono signal
+		sound = SoundIn.ar(in_bus) * gain;
 
-			Out.ar(out_bus, bform);
+		// 2. Encode to B-format using ATK's directional encoder.
+		bform = HoaEncodeDirection.ar(
+			in: sound,
+			theta: azim,
+			phi: elev,
+			radius: dist,
+			order: ~hoa_order
+		);
 
+		// 3. Output the multi-channel B-format stream
+		Out.ar(out_bus, bform);
 	}).add;
 
 	////////////////////////////////////////////////////////////////////////////////////////
@@ -104,44 +112,6 @@ s.waitForBoot({
 	~hoa_output.moveToTail(~output_GROUP);
 	~hoa_output.set(\gain,0.75);
 
-
-
-	////////////////////////////////////////////////////////////////////////////////////////
-	// One OSC listener for data from the Quest 3
-	////////////////////////////////////////////////////////////////////////////////////////
-
-	OSCdef('/hand',
-		{
-
-			arg msg, time, addr, recvPort;
-			var a,e,d;
-			var x,y,z;
-
-			//a = msg[4] / 180 * 3.1415;
-			//e = msg[5] / 180 * 3.1415;
-			//d = msg[6];
-
-
-			var c;
-
-			if(msg[2]=='src1:',{
-
-				x = msg[4];
-				y = msg[5];
-				z = msg[6];
-
-				c	= Cartesian(x,y,z);
-
-				~hoa_panners[0].set(\azim, c.theta());
-				~hoa_panners[0].set(\elev, c.phi());
-				~hoa_panners[0].set(\dist, c.rho());
-
-				msg.postln;
-
-			},{});
-
-
-	},'/src/xyz');
 
 	////////////////////////////////////////////////////////////////////////////////////////
 	// One OSC listener function for each spatial paramter
