@@ -40,3 +40,4 @@ For all three message types, the first argument is an integer defining the sourc
 For azim and elev, the second argument is a float that represents the angle in radians.
 For dist, the second argument is float that represents the distance in meters (approximated gain reduction).
 
+There is a PD patch in the repo that shows how the control works.
