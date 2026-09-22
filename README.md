@@ -27,6 +27,8 @@ The script litespat_server.sc can be run from the SuperCollider IDE, or via the 
 
     $ sclang SuperCollider/litespat_server.sc
 
+The script will run in the terminal only, but launch a GUI that shows the input and output meters.
+
 
 ## Controlling Source Positions
 

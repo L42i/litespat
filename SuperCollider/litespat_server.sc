@@ -152,4 +152,5 @@ s.waitForBoot({
 	thisProcess.openUDPPort(~osc_IN);
 	postln("Listening for OSC on ports: "++thisProcess.openPorts);
 
+	s.meter;
 });
